@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { ChatMessage, CompletionOptions, LlmProvider } from "./types";
+import type { ChatMessage, CompletionOptions, LlmProvider } from "../types";
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 function toGeminiRole(role: ChatMessage["role"]): "user" | "model" {
   return role === "assistant" ? "model" : "user";
@@ -28,7 +28,9 @@ export function createGeminiProvider(): LlmProvider {
       const rest = messages.filter((m) => m.role !== "system");
 
       if (rest.length === 0) {
-        throw new Error("Gemini complete() requires at least one user/assistant message");
+        throw new Error(
+          "Gemini complete() requires at least one user/assistant message",
+        );
       }
 
       const model = client.getGenerativeModel({
@@ -42,8 +44,8 @@ export function createGeminiProvider(): LlmProvider {
         },
       });
 
-      // Gemini chat expects alternating user/model; fold consecutive same-role turns.
-      const history: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+      const history: { role: "user" | "model"; parts: { text: string }[] }[] =
+        [];
       for (const msg of rest.slice(0, -1)) {
         const role = toGeminiRole(msg.role);
         const last = history[history.length - 1];
@@ -54,7 +56,6 @@ export function createGeminiProvider(): LlmProvider {
         }
       }
 
-      // Gemini requires history to start with user if non-empty.
       while (history.length > 0 && history[0].role !== "user") {
         history.shift();
       }
@@ -62,10 +63,39 @@ export function createGeminiProvider(): LlmProvider {
       const last = rest[rest.length - 1];
       const chat = model.startChat({ history });
       const result = await chat.sendMessage(last.content);
-      const text = result.response.text();
-      if (!text?.trim()) {
-        throw new Error("Gemini returned an empty response");
+      const candidate = result.response.candidates?.[0];
+      const finishReason = candidate?.finishReason ?? "UNKNOWN";
+
+      let text = "";
+      try {
+        text = result.response.text();
+      } catch {
+        throw new Error(
+          `Gemini returned no usable text (finishReason=${finishReason}). Try a shorter approach or less code.`,
+        );
       }
+
+      if (!text?.trim()) {
+        throw new Error(
+          `Gemini returned an empty response (finishReason=${finishReason}). Try a shorter approach.`,
+        );
+      }
+
+      const hitLengthCap =
+        finishReason === "MAX_TOKENS" ||
+        finishReason === "LENGTH" ||
+        String(finishReason).includes("MAX");
+
+      if (options.json && hitLengthCap) {
+        const looksComplete =
+          text.trim().startsWith("{") && text.trim().endsWith("}");
+        if (!looksComplete) {
+          throw new Error(
+            "Gemini hit the output length limit mid-response (usually from a very long input). Shorten your approach/code and try again.",
+          );
+        }
+      }
+
       return text;
     },
   };

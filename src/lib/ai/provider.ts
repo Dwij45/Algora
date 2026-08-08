@@ -50,7 +50,7 @@ export function getConfiguredProviderInfo(): {
 
   const modelHint =
     provider === "gemini"
-      ? process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash"
+      ? process.env.GEMINI_MODEL?.trim() || "gemini-flash-latest"
       : provider === "openai"
         ? process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
         : process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-20250514";
