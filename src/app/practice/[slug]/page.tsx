@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { ProblemPanel } from "@/components/practice/ProblemPanel";
+import { PracticeWorkspace } from "@/components/practice/PracticeWorkspace";
 import { getProblemBySlug } from "@/lib/leetcode/cache";
 import { normalizeProblemSlug } from "@/lib/utils/slug";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ session?: string }>;
 };
 
-export default async function PracticeProblemPage({ params }: PageProps) {
+export default async function PracticeProblemPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug: raw } = await params;
+  const { session: sessionId } = await searchParams;
   const slug = normalizeProblemSlug(decodeURIComponent(raw));
 
   if (!slug) {
@@ -33,23 +38,10 @@ export default async function PracticeProblemPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/practice"
-          className="text-sm text-muted transition-colors hover:text-accent"
-        >
-          ← Back to search
-        </Link>
-        <p className="text-xs text-muted">
-          Logic + mentor panels arrive in Phase 3
-        </p>
-      </div>
-
-      <div className="min-h-[60vh] flex-1">
-        <ProblemPanel problem={result.problem} />
-      </div>
-    </div>
+    <PracticeWorkspace
+      problem={result.problem}
+      initialSessionId={sessionId ?? null}
+    />
   );
 }
 
