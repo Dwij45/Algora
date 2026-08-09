@@ -1,29 +1,36 @@
 @import "tailwindcss";
 
 :root {
-  --bg0: #0b0d10;
-  --bg1: #12151a;
-  --bg2: #1a1f27;
-  --border: #2a313c;
-  --text: #e8edf4;
-  --muted: #9aa6b2;
+  /* One grey family — LeetCode-adjacent, no competing hues */
+  --bg0: #0f0f0f;
+  --bg1: #1a1a1a;
+  --bg2: #1a1a1a;
+  --bg-elevated: #222222;
+  --border: #2c2c2c;
+  --text: #eff1f6;
+  --muted: #8b8b8b;
+  --label: #c4b59a; /* warm parchment for Input / Output / Explanation */
   --accent: #3dd6c6;
   --accent-dim: #2a9d8f;
   --danger: #f07178;
   --warning: #e6b450;
   --ok: #7fd99a;
-  --radius: 10px;
-  --font-sans: var(--font-dm-sans), "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains-mono), "Consolas", monospace;
+  --sky: #7dd3fc;
+  --radius: 8px;
+  --font-sans: var(--font-ibm-plex-sans), "Segoe UI", sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), "Consolas", monospace;
+  --line-rule: #2a2a2a;
 }
 
 @theme inline {
   --color-bg0: var(--bg0);
   --color-bg1: var(--bg1);
   --color-bg2: var(--bg2);
+  --color-bg-elevated: var(--bg-elevated);
   --color-border: var(--border);
   --color-text: var(--text);
   --color-muted: var(--muted);
+  --color-label: var(--label);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
   --color-danger: var(--danger);
@@ -47,11 +54,7 @@ body {
   min-height: 100vh;
   color: var(--text);
   font-family: var(--font-sans);
-  background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(61, 214, 198, 0.08), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(42, 49, 60, 0.55), transparent 50%),
-    linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 100%);
-  background-attachment: fixed;
+  background: var(--bg0);
 }
 
 a {
@@ -60,7 +63,7 @@ a {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 @keyframes fade-in-up {
@@ -76,4 +79,83 @@ a {
 
 .animate-fade-in {
   animation: fade-in-up 0.45s ease-out both;
+}
+
+.lined-textarea {
+  line-height: 1.75rem;
+  background-color: var(--bg1);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.75rem - 1px),
+    var(--line-rule) calc(1.75rem - 1px),
+    var(--line-rule) 1.75rem
+  );
+  background-attachment: local;
+  background-origin: content-box;
+  background-clip: content-box;
+}
+
+.lc-separator-v {
+  width: 5px !important;
+  background: var(--bg0);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.lc-separator-v:hover,
+.lc-separator-v[data-separator][data-active] {
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg0));
+}
+
+.lc-separator-h {
+  height: 5px !important;
+  background: var(--bg0);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.lc-separator-h:hover,
+.lc-separator-h[data-separator][data-active] {
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg0));
+}
+
+.board-host,
+.board-host .excalidraw {
+  height: 100%;
+  background: var(--bg1) !important;
+}
+
+.board-host .excalidraw {
+  --color-primary: #3dd6c6;
+}
+
+/* Keep canvas surface on theme grey even before Excalidraw paints */
+.board-host .excalidraw .Layer,
+.board-host canvas {
+  background-color: transparent;
+}
+
+.statement-scroll {
+  scrollbar-gutter: stable;
+}
+
+/* Example blocks — left rule like the reference UI */
+.example-block {
+  margin: 1rem 0 1.25rem;
+  padding: 0.15rem 0 0.15rem 1rem;
+  border-left: 2px solid #3a3a3a;
+}
+
+.stmt-label {
+  color: var(--label);
+  font-weight: 600;
+}
+
+.stmt-inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: #d7dbe3;
 }
