@@ -6,13 +6,17 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createPrismaClient() {
-  const rawUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+/** Resolve SQLite file path the same way for runtime as Prisma CLI (cwd-relative). */
+export function resolveSqlitePath(databaseUrl = process.env.DATABASE_URL): string {
+  const rawUrl = databaseUrl ?? "file:./prisma/dev.db";
   const relativePath = rawUrl.replace(/^file:/, "");
-  const dbPath = path.isAbsolute(relativePath)
+  return path.isAbsolute(relativePath)
     ? relativePath
-    : path.join(process.cwd(), "prisma", relativePath);
+    : path.resolve(process.cwd(), relativePath);
+}
 
+function createPrismaClient() {
+  const dbPath = resolveSqlitePath();
   const adapter = new PrismaBetterSqlite3({ url: dbPath });
   return new PrismaClient({ adapter });
 }
