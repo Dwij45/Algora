@@ -1,133 +1,137 @@
 "use client";
 
+import Editor, { type Monaco } from "@monaco-editor/react";
 import { PROMPT_LIMITS } from "@/lib/ai/limits";
 
 type LogicInputProps = {
-  logic: string;
-  code: string;
-  selfComplexity: string;
-  onLogicChange: (v: string) => void;
-  onCodeChange: (v: string) => void;
-  onSelfComplexityChange: (v: string) => void;
+  value: string;
+  onChange: (v: string) => void;
   onAnalyze: () => void;
   analyzing: boolean;
   disabled?: boolean;
+  language?: string;
+  onLanguageChange?: (lang: string) => void;
 };
 
-/** Right pane — lined notebook for approach / pseudocode (LeetCode editor side). */
+const LANGS = [
+  { id: "javascript", label: "JS / Pseudocode" },
+  { id: "python", label: "Python" },
+  { id: "java", label: "Java" },
+  { id: "cpp", label: "C++" },
+  { id: "plaintext", label: "Plain" },
+] as const;
+
+const MONACO_THEME = "problem-solver-dark";
+
+function defineTheme(monaco: Monaco) {
+  monaco.editor.defineTheme(MONACO_THEME, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#1a1a1a",
+      "editor.foreground": "#eff1f6",
+      "editorLineNumber.foreground": "#5c5c5c",
+      "editorLineNumber.activeForeground": "#8b8b8b",
+      "editor.lineHighlightBackground": "#222222",
+      "editor.selectionBackground": "#2a3f3c",
+      "editorCursor.foreground": "#3dd6c6",
+      "editorWidget.background": "#1a1a1a",
+      "editorGutter.background": "#1a1a1a",
+    },
+  });
+}
+
+/** Monaco IDE editor — same grey family as the rest of the app. */
 export function LogicInput({
-  logic,
-  code,
-  selfComplexity,
-  onLogicChange,
-  onCodeChange,
-  onSelfComplexityChange,
+  value,
+  onChange,
   onAnalyze,
   analyzing,
   disabled,
+  language = "javascript",
+  onLanguageChange,
 }: LogicInputProps) {
-  const logicOver = logic.length > PROMPT_LIMITS.userLogic;
-  const codeOver = code.length > PROMPT_LIMITS.userCode;
+  const over = value.length > PROMPT_LIMITS.userLogic;
 
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-[var(--radius)] border border-border bg-bg2/60">
-      <header className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
-        <h2 className="text-sm font-semibold tracking-tight">
-          Approach / pseudocode
-        </h2>
-        <p className="mt-0.5 text-xs text-muted">
-          Dictate with Wispr Flow or type on the ruled page
-        </p>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-bg1">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="text-sm font-semibold tracking-tight">Code</h2>
+          <select
+            value={language}
+            onChange={(e) => onLanguageChange?.(e.target.value)}
+            disabled={disabled || analyzing}
+            className="h-7 rounded border border-border bg-bg0 px-1.5 font-mono text-[11px] text-muted outline-none focus:border-accent/40"
+          >
+            {LANGS.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span
+            className={[
+              "font-mono text-[11px]",
+              over ? "text-danger" : "text-muted",
+            ].join(" ")}
+          >
+            {value.length}/{PROMPT_LIMITS.userLogic}
+          </span>
+          <button
+            type="button"
+            onClick={onAnalyze}
+            disabled={
+              disabled || analyzing || value.trim().length < 20 || over
+            }
+            className="h-8 rounded-md bg-accent px-3 text-xs font-semibold text-bg0 hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {analyzing ? "Analyzing…" : "Analyze"}
+          </button>
+        </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 sm:p-5">
-        <label className="flex min-h-0 flex-1 flex-col gap-1.5">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-xs font-medium text-muted">Logic</span>
-            <span
-              className={[
-                "font-mono text-[11px]",
-                logicOver ? "text-danger" : "text-muted",
-              ].join(" ")}
-            >
-              {logic.length}/{PROMPT_LIMITS.userLogic}
-            </span>
-          </div>
-          <textarea
-            value={logic}
-            onChange={(e) => onLogicChange(e.target.value)}
-            placeholder="Write your approach or pseudocode…"
-            disabled={disabled || analyzing}
-            className="lined-textarea min-h-[18rem] flex-1 resize-none rounded-[var(--radius)] border border-border px-3 py-2 font-mono text-sm text-text outline-none placeholder:text-muted/55 focus:border-accent/50"
-          />
-          {logicOver ? (
-            <p className="text-xs text-danger">
-              Too long for a reliable mentor call — trim before analyzing.
-            </p>
-          ) : null}
-        </label>
-
-        <details className="shrink-0 rounded-[var(--radius)] border border-border/80 bg-bg1/30">
-          <summary className="cursor-pointer px-3 py-2 text-sm text-muted hover:text-text">
-            Optional: code paste + self complexity
-          </summary>
-          <div className="space-y-3 border-t border-border px-3 py-3">
-            <label className="flex flex-col gap-1.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-xs font-medium text-muted">
-                  Code (not executed)
-                </span>
-                <span
-                  className={[
-                    "font-mono text-[11px]",
-                    codeOver ? "text-danger" : "text-muted",
-                  ].join(" ")}
-                >
-                  {code.length}/{PROMPT_LIMITS.userCode}
-                </span>
-              </div>
-              <textarea
-                value={code}
-                onChange={(e) => onCodeChange(e.target.value)}
-                placeholder="Paste draft code if you have it…"
-                disabled={disabled || analyzing}
-                spellCheck={false}
-                className="min-h-[7rem] resize-y rounded-[var(--radius)] border border-border bg-bg1 px-3 py-2 font-mono text-xs leading-relaxed text-text outline-none placeholder:text-muted/60 focus:border-accent/50"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted">
-                Self complexity
-              </span>
-              <input
-                value={selfComplexity}
-                onChange={(e) => onSelfComplexityChange(e.target.value)}
-                placeholder="e.g. O(n²) time, O(1) space"
-                disabled={disabled || analyzing}
-                className="h-10 rounded-[var(--radius)] border border-border bg-bg1 px-3 text-sm text-text outline-none placeholder:text-muted/60 focus:border-accent/50"
-              />
-            </label>
-          </div>
-        </details>
-      </div>
-
-      <div className="shrink-0 border-t border-border p-4">
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={
-            disabled ||
-            analyzing ||
-            logic.trim().length < 20 ||
-            logicOver ||
-            codeOver
+      <div className="min-h-0 flex-1 overflow-hidden bg-bg1">
+        <Editor
+          height="100%"
+          language={language}
+          theme={MONACO_THEME}
+          value={value}
+          onChange={(v) => onChange(v ?? "")}
+          beforeMount={defineTheme}
+          options={{
+            readOnly: Boolean(disabled || analyzing),
+            fontSize: 14,
+            fontFamily: "var(--font-ibm-plex-mono), Consolas, monospace",
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            wordWrap: "on",
+            lineNumbers: "on",
+            renderLineHighlight: "line",
+            padding: { top: 12, bottom: 12 },
+            automaticLayout: true,
+            tabSize: 2,
+            scrollbar: {
+              verticalScrollbarSize: 8,
+              horizontalScrollbarSize: 8,
+            },
+          }}
+          loading={
+            <div className="flex h-full items-center justify-center bg-bg1 text-sm text-muted">
+              Loading editor…
+            </div>
           }
-          className="h-11 w-full rounded-[var(--radius)] bg-accent text-sm font-semibold text-bg0 transition-colors hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {analyzing ? "Analyzing…" : "Analyze approach"}
-        </button>
+        />
       </div>
+
+      {over ? (
+        <p className="shrink-0 border-t border-danger/30 bg-danger/10 px-3 py-1.5 text-xs text-danger">
+          Too long for a reliable mentor call — trim before analyzing.
+        </p>
+      ) : null}
     </section>
   );
 }
