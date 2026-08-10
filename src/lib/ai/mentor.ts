@@ -53,12 +53,29 @@ export async function analyzeApproach(input: {
   userLogic: string;
   userCode?: string | null;
   selfComplexity?: string | null;
+  boardImageBase64?: string | null;
+  boardImageMime?: string | null;
 }): Promise<MentorAnalysis> {
   const llm = getLlmProvider();
+  const hasBoard = Boolean(input.boardImageBase64?.trim());
   const raw = await llm.complete(
     [
       { role: "system", content: mentorSystemPrompt() },
-      { role: "user", content: mentorAnalyzeUserPrompt(input) },
+      {
+        role: "user",
+        content: mentorAnalyzeUserPrompt({
+          ...input,
+          hasBoardImage: hasBoard,
+        }),
+        images: hasBoard
+          ? [
+              {
+                mimeType: input.boardImageMime?.trim() || "image/png",
+                data: input.boardImageBase64!.trim(),
+              },
+            ]
+          : undefined,
+      },
     ],
     { json: true, temperature: 0.35, maxTokens: 8192 },
   );

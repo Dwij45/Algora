@@ -27,6 +27,7 @@ Hard rules:
 - Compare vs a typical optimal approach; explain WHY faster ideas win (data structures / algorithms), not fake timings.
 - suggestedMistakeTags: 0–5 DSA **topic / technique** slugs for concept gaps only (examples: two_pointers, hash_table, binary_search, tree, bfs, dfs, dp, sliding_window, stack, graph). Use snake_case. Tag a technique the learner missed or misused (e.g. should have used two pointers → "two_pointers"). Prefer LeetCode-style topics.
 - NEVER put syntax typos, language API recall, compiler errors, or "forgot a semicolon" in suggestedMistakeTags — those are not topic weaknesses. Leave the array empty if there is no conceptual gap.
+- If a whiteboard/sketch image is attached, treat it as part of the learner's approach (flowchart, arrays, pointers). Describe what you see in understoodApproach; do not invent details that are not in the image or text.
 - Return ONLY valid JSON matching the schema. No markdown fences, no commentary outside JSON.
 - Keep every string field concise. Prefer short bullets over long essays so the JSON stays complete.
 
@@ -54,6 +55,7 @@ export function mentorAnalyzeUserPrompt(input: {
   userLogic: string;
   userCode?: string | null;
   selfComplexity?: string | null;
+  hasBoardImage?: boolean;
 }): string {
   const statement = clip(input.contentText, PROMPT_LIMITS.problemStatement);
   const logic = clip(input.userLogic, PROMPT_LIMITS.userLogic);
@@ -74,6 +76,10 @@ export function mentorAnalyzeUserPrompt(input: {
     ? `\n\nLearner code (not executed):\n\`\`\`\n${code.text}\n\`\`\``
     : "";
 
+  const boardNote = input.hasBoardImage
+    ? "\n\nA whiteboard sketch image is attached — read it as part of the learner's approach."
+    : "";
+
   return `Problem: ${input.title} (${input.slug}) — ${input.difficulty}
 ${notes.length ? `\nNote: ${notes.join("; ")}.` : ""}
 
@@ -81,7 +87,7 @@ Statement:
 ${statement.text}
 
 Learner natural-language approach:
-${logic.text}${self}${codeBlock}
+${logic.text}${self}${codeBlock}${boardNote}
 
 Analyze as specified. Return JSON only.`;
 }

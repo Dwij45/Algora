@@ -1,6 +1,14 @@
+export type ImagePart = {
+  mimeType: string;
+  /** Raw base64 without data: URL prefix */
+  data: string;
+};
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
+  /** Optional images (used on the final user turn for multimodal). */
+  images?: ImagePart[];
 };
 
 export type CompletionOptions = {

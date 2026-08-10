@@ -7,6 +7,30 @@ function toGeminiRole(role: ChatMessage["role"]): "user" | "model" {
   return role === "assistant" ? "model" : "user";
 }
 
+type GeminiPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } };
+
+function messageToParts(msg: ChatMessage): GeminiPart[] {
+  const parts: GeminiPart[] = [];
+  if (msg.content.trim()) {
+    parts.push({ text: msg.content });
+  }
+  for (const img of msg.images ?? []) {
+    if (!img.data?.trim()) continue;
+    parts.push({
+      inlineData: {
+        mimeType: img.mimeType || "image/png",
+        data: img.data,
+      },
+    });
+  }
+  if (parts.length === 0) {
+    parts.push({ text: "(empty)" });
+  }
+  return parts;
+}
+
 export function createGeminiProvider(): LlmProvider {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
@@ -44,15 +68,15 @@ export function createGeminiProvider(): LlmProvider {
         },
       });
 
-      const history: { role: "user" | "model"; parts: { text: string }[] }[] =
-        [];
+      const history: { role: "user" | "model"; parts: GeminiPart[] }[] = [];
       for (const msg of rest.slice(0, -1)) {
         const role = toGeminiRole(msg.role);
+        const parts = messageToParts({ ...msg, images: undefined });
         const last = history[history.length - 1];
         if (last && last.role === role) {
-          last.parts[0].text += `\n\n${msg.content}`;
+          last.parts.push(...parts);
         } else {
-          history.push({ role, parts: [{ text: msg.content }] });
+          history.push({ role, parts });
         }
       }
 
@@ -62,7 +86,7 @@ export function createGeminiProvider(): LlmProvider {
 
       const last = rest[rest.length - 1];
       const chat = model.startChat({ history });
-      const result = await chat.sendMessage(last.content);
+      const result = await chat.sendMessage(messageToParts(last));
       const candidate = result.response.candidates?.[0];
       const finishReason = candidate?.finishReason ?? "UNKNOWN";
 
@@ -81,10 +105,9 @@ export function createGeminiProvider(): LlmProvider {
         );
       }
 
+      const reason = String(finishReason);
       const hitLengthCap =
-        finishReason === "MAX_TOKENS" ||
-        finishReason === "LENGTH" ||
-        String(finishReason).includes("MAX");
+        reason.includes("MAX") || reason.includes("LENGTH");
 
       if (options.json && hitLengthCap) {
         const looksComplete =

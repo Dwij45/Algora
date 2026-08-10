@@ -8,8 +8,9 @@ export function sessionInputHash(parts: {
   problemSlug: string;
   userLogic: string;
   userCode?: string | null;
+  boardFingerprint?: string | null;
 }): string {
   return sha256Hex(
-    `${parts.problemSlug}\n${parts.userLogic}\n${parts.userCode ?? ""}`,
+    `${parts.problemSlug}\n${parts.userLogic}\n${parts.userCode ?? ""}\n${parts.boardFingerprint ?? ""}`,
   );
 }

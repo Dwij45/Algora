@@ -4,4 +4,6 @@ export const PROMPT_LIMITS = {
   userLogic: 8_000,
   userCode: 10_000,
   continueMessage: 4_000,
+  /** Raw base64 length ~1.2MB PNG after compression */
+  boardImageBase64: 1_600_000,
 } as const;
