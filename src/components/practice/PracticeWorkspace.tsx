@@ -10,6 +10,7 @@ import { MentorPanel } from "@/components/practice/MentorPanel";
 import { ProblemPanel } from "@/components/practice/ProblemPanel";
 import { SessionContinue } from "@/components/practice/SessionContinue";
 import { TopicBadge } from "@/components/ui/Badge";
+import { exportBoardPngBase64 } from "@/lib/board/exportBoard";
 import type { MentorAnalysis, SessionMessage } from "@/lib/ai/schemas";
 import type { ProblemApiDto } from "@/lib/leetcode/normalize";
 import type { SessionDto } from "@/lib/sessions/serialize";
@@ -83,6 +84,7 @@ export function PracticeWorkspace({
   const [continuing, setContinuing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SessionDto[]>([]);
+  const [includeBoard, setIncludeBoard] = useState(false);
 
   const analysis =
     session && isMentorAnalysis(session.analysis) ? session.analysis : null;
@@ -128,9 +130,33 @@ export function PracticeWorkspace({
   }, [initialSessionId]);
 
   async function onAnalyze() {
-    const userLogic = logicPayload(notes, code, sideMode);
     setAnalyzing(true);
     setError(null);
+
+    let boardImageBase64: string | null = null;
+    if (includeBoard) {
+      try {
+        boardImageBase64 = await exportBoardPngBase64(problem.slug);
+      } catch {
+        setError("Could not export the board image.");
+        setAnalyzing(false);
+        return;
+      }
+      if (!boardImageBase64) {
+        setError(
+          "Send board is on, but the board is empty — draw something or turn the toggle off.",
+        );
+        setAnalyzing(false);
+        return;
+      }
+    }
+
+    const userLogic =
+      logicPayload(notes, code, sideMode) ||
+      (boardImageBase64
+        ? "Approach is sketched on the whiteboard."
+        : "");
+
     if (sideMode === "board") setSideMode("notes");
     try {
       const res = await fetch("/api/sessions", {
@@ -141,6 +167,8 @@ export function PracticeWorkspace({
           userLogic,
           userCode: null,
           selfComplexity: null,
+          boardImageBase64,
+          boardImageMime: boardImageBase64 ? "image/png" : null,
         }),
       });
       const data = (await res.json()) as {
@@ -218,22 +246,41 @@ export function PracticeWorkspace({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <div className="flex rounded-lg border border-border bg-bg0 p-1">
-            {SIDE_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setSideMode(tab.id)}
-                className={[
-                  "h-9 min-w-[4.5rem] rounded-md px-3 text-sm font-semibold transition-colors",
-                  sideMode === tab.id
-                    ? tab.active
-                    : "text-muted hover:bg-bg-elevated hover:text-text",
-                ].join(" ")}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5">
+            <div className="flex rounded-lg border border-border bg-bg0 p-1">
+              {SIDE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSideMode(tab.id)}
+                  className={[
+                    "h-9 min-w-[4.5rem] rounded-md px-3 text-sm font-semibold transition-colors",
+                    sideMode === tab.id
+                      ? tab.active
+                      : "text-muted hover:bg-bg-elevated hover:text-text",
+                  ].join(" ")}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <label
+              className={[
+                "flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-2.5 text-xs font-semibold transition-colors",
+                includeBoard
+                  ? "border-sky-400/50 bg-sky-400/15 text-sky-300"
+                  : "border-border bg-bg0 text-muted hover:text-text",
+              ].join(" ")}
+              title="When on, Analyze exports the board PNG and sends it to the mentor"
+            >
+              <input
+                type="checkbox"
+                className="accent-sky-400"
+                checked={includeBoard}
+                onChange={(e) => setIncludeBoard(e.target.checked)}
+              />
+              Send board
+            </label>
           </div>
           {history.length > 0 ? (
             <select
@@ -299,6 +346,7 @@ export function PracticeWorkspace({
                     onChange={setNotes}
                     onAnalyze={onAnalyze}
                     analyzing={analyzing}
+                    allowBoardOnly={includeBoard}
                   />
                 ) : sideMode === "code" ? (
                   <LogicInput
@@ -308,9 +356,14 @@ export function PracticeWorkspace({
                     analyzing={analyzing}
                     language={language}
                     onLanguageChange={setLanguage}
+                    allowBoardOnly={includeBoard}
                   />
                 ) : (
-                  <BoardCanvas problemSlug={problem.slug} />
+                  <BoardCanvas
+                    problemSlug={problem.slug}
+                    onAnalyze={onAnalyze}
+                    analyzing={analyzing}
+                  />
                 )}
               </div>
             </Panel>
@@ -328,6 +381,7 @@ export function PracticeWorkspace({
                   revealAlternates={Boolean(session?.revealAlternates)}
                   loading={analyzing}
                   error={error}
+                  sessionId={session?.id}
                   footer={
                     session ? (
                       <SessionContinue

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { boardStorageKey } from "@/lib/board/exportBoard";
 import "@excalidraw/excalidraw/index.css";
 
 const Excalidraw = dynamic(
@@ -21,6 +22,8 @@ const BOARD_BG = "#1a1a1a";
 
 type BoardCanvasProps = {
   problemSlug: string;
+  onAnalyze?: () => void;
+  analyzing?: boolean;
 };
 
 type StoredBoard = {
@@ -35,10 +38,6 @@ type ExcalidrawApi = {
   }) => void;
   getAppState: () => { viewBackgroundColor?: string };
 };
-
-function storageKey(slug: string) {
-  return `problem-solver:board:${slug}`;
-}
 
 function isLightOrEmptyBg(color: unknown): boolean {
   if (typeof color !== "string" || !color.trim()) return true;
@@ -60,14 +59,18 @@ function normalizeBg(color: unknown): string {
  * Dark Excalidraw board — defaults to app grey; user can change canvas color.
  * Persists locally per problem slug.
  */
-export function BoardCanvas({ problemSlug }: BoardCanvasProps) {
+export function BoardCanvas({
+  problemSlug,
+  onAnalyze,
+  analyzing,
+}: BoardCanvasProps) {
   const [initialData, setInitialData] = useState<StoredBoard | null>(null);
   const [ready, setReady] = useState(false);
   const [api, setApi] = useState<ExcalidrawApi | null>(null);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey(problemSlug));
+      const raw = localStorage.getItem(boardStorageKey(problemSlug));
       if (raw) {
         const parsed = JSON.parse(raw) as StoredBoard;
         const bg = normalizeBg(parsed.appState?.viewBackgroundColor);
@@ -100,7 +103,6 @@ export function BoardCanvas({ problemSlug }: BoardCanvasProps) {
     setReady(true);
   }, [problemSlug]);
 
-  // Force canvas bg after mount (Excalidraw sometimes ignores initialData bg)
   useEffect(() => {
     if (!api) return;
     const current = api.getAppState().viewBackgroundColor;
@@ -130,7 +132,10 @@ export function BoardCanvas({ problemSlug }: BoardCanvasProps) {
           },
           files,
         };
-        localStorage.setItem(storageKey(problemSlug), JSON.stringify(payload));
+        localStorage.setItem(
+          boardStorageKey(problemSlug),
+          JSON.stringify(payload),
+        );
       } catch {
         // ignore
       }
@@ -161,24 +166,44 @@ export function BoardCanvas({ problemSlug }: BoardCanvasProps) {
   }
 
   return (
-    <div className="board-host h-full min-h-0 w-full overflow-hidden bg-bg1">
-      <Excalidraw
-        theme="dark"
-        initialData={{
-          elements: initialData.elements as never[],
-          appState: {
-            ...(initialData.appState ?? {}),
-            theme: "dark",
-            viewBackgroundColor: normalizeBg(
-              initialData.appState?.viewBackgroundColor,
-            ),
-          },
-          files: initialData.files as never,
-        }}
-        excalidrawAPI={(a) => setApi(a as unknown as ExcalidrawApi)}
-        onChange={onChange as never}
-        UIOptions={uiOptions}
-      />
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-bg1">
+      {onAnalyze ? (
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">Board</h2>
+            <p className="text-[11px] text-muted">
+              Enable Send board beside the tab to include this sketch
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onAnalyze}
+            disabled={analyzing}
+            className="h-8 rounded-md bg-accent px-3 text-xs font-semibold text-bg0 hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {analyzing ? "Analyzing…" : "Analyze"}
+          </button>
+        </header>
+      ) : null}
+      <div className="board-host min-h-0 flex-1 overflow-hidden">
+        <Excalidraw
+          theme="dark"
+          initialData={{
+            elements: initialData.elements as never[],
+            appState: {
+              ...(initialData.appState ?? {}),
+              theme: "dark",
+              viewBackgroundColor: normalizeBg(
+                initialData.appState?.viewBackgroundColor,
+              ),
+            },
+            files: initialData.files as never,
+          }}
+          excalidrawAPI={(a) => setApi(a as unknown as ExcalidrawApi)}
+          onChange={onChange as never}
+          UIOptions={uiOptions}
+        />
+      </div>
     </div>
   );
 }

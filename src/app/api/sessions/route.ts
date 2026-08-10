@@ -35,6 +35,8 @@ export async function POST(request: Request) {
     userLogic?: string;
     userCode?: string | null;
     selfComplexity?: string | null;
+    boardImageBase64?: string | null;
+    boardImageMime?: string | null;
   };
 
   try {
@@ -44,12 +46,32 @@ export async function POST(request: Request) {
   }
 
   const slug = normalizeProblemSlug(body.problemSlug ?? "");
-  const userLogic = body.userLogic?.trim() ?? "";
+  let userLogic = body.userLogic?.trim() ?? "";
   const userCode = body.userCode?.trim() || null;
+  const boardImageBase64 = body.boardImageBase64?.trim() || null;
+  const boardImageMime = body.boardImageMime?.trim() || "image/png";
+  const hasBoard = Boolean(boardImageBase64);
+
   if (!slug) {
     return NextResponse.json({ error: "problemSlug is required." }, { status: 400 });
   }
-  if (userLogic.length < 20) {
+
+  if (hasBoard && boardImageBase64!.length > PROMPT_LIMITS.boardImageBase64) {
+    return NextResponse.json(
+      {
+        error:
+          "Board image is too large. Simplify the sketch or turn off Send board.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!userLogic && hasBoard) {
+    userLogic =
+      "Approach is sketched on the whiteboard (see attached board image).";
+  }
+
+  if (userLogic.length < 20 && !hasBoard) {
     return NextResponse.json(
       { error: "userLogic is too short — describe your approach in a few sentences." },
       { status: 400 },
@@ -81,32 +103,39 @@ export async function POST(request: Request) {
   }
   const problem = problemResult.problem;
 
+  const boardFingerprint = hasBoard
+    ? `board:${boardImageBase64!.length}:${boardImageBase64!.slice(0, 32)}:${boardImageBase64!.slice(-32)}`
+    : null;
+
   const inputHash = sessionInputHash({
     problemSlug: slug,
     userLogic,
     userCode,
+    boardFingerprint,
   });
 
-  // Reuse identical recent analysis to save LLM calls.
-  const recent = await prisma.session.findFirst({
-    where: {
-      inputHash,
-      problemSlug: slug,
-      createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-    },
-    orderBy: { createdAt: "desc" },
-    include: { problem: { select: { title: true } } },
-  });
+  // Reuse identical recent analysis to save LLM calls (skip if board attached — fingerprints are weak).
+  if (!hasBoard) {
+    const recent = await prisma.session.findFirst({
+      where: {
+        inputHash,
+        problemSlug: slug,
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+      orderBy: { createdAt: "desc" },
+      include: { problem: { select: { title: true } } },
+    });
 
-  if (recent) {
-    const analysisCheck = MentorAnalysisSchema.safeParse(
-      JSON.parse(recent.analysisJson || "{}"),
-    );
-    if (analysisCheck.success) {
-      return NextResponse.json({
-        session: sessionRowToDto(recent),
-        reused: true,
-      });
+    if (recent) {
+      const analysisCheck = MentorAnalysisSchema.safeParse(
+        JSON.parse(recent.analysisJson || "{}"),
+      );
+      if (analysisCheck.success) {
+        return NextResponse.json({
+          session: sessionRowToDto(recent),
+          reused: true,
+        });
+      }
     }
   }
 
@@ -120,6 +149,8 @@ export async function POST(request: Request) {
       userLogic,
       userCode,
       selfComplexity: body.selfComplexity,
+      boardImageBase64,
+      boardImageMime,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Mentor analysis failed.";
@@ -130,7 +161,9 @@ export async function POST(request: Request) {
   const messages: SessionMessage[] = [
     {
       role: "user",
-      content: userLogic,
+      content: hasBoard
+        ? `${userLogic}\n\n[whiteboard sketch attached]`
+        : userLogic,
       at: now,
     },
     {

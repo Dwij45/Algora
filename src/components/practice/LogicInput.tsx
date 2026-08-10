@@ -11,6 +11,7 @@ type LogicInputProps = {
   disabled?: boolean;
   language?: string;
   onLanguageChange?: (lang: string) => void;
+  allowBoardOnly?: boolean;
 };
 
 const LANGS = [
@@ -51,8 +52,10 @@ export function LogicInput({
   disabled,
   language = "javascript",
   onLanguageChange,
+  allowBoardOnly,
 }: LogicInputProps) {
   const over = value.length > PROMPT_LIMITS.userLogic;
+  const tooShort = value.trim().length < 20 && !allowBoardOnly;
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-bg1">
@@ -85,7 +88,7 @@ export function LogicInput({
             type="button"
             onClick={onAnalyze}
             disabled={
-              disabled || analyzing || value.trim().length < 20 || over
+              disabled || analyzing || tooShort || over
             }
             className="h-8 rounded-md bg-accent px-3 text-xs font-semibold text-bg0 hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-50"
           >
