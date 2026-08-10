@@ -1,9 +1,6 @@
-import { MISTAKE_CATEGORIES } from "@/lib/mistakes/categories";
 import { PROMPT_LIMITS } from "./limits";
 
 export { PROMPT_LIMITS } from "./limits";
-
-const TAG_LIST = MISTAKE_CATEGORIES.join(", ");
 
 function clip(text: string, max: number): { text: string; truncated: boolean } {
   const trimmed = text.trim();
@@ -28,7 +25,8 @@ Hard rules:
 - Estimate Big-O from the learner's described approach / code structure only.
 - Propose alternate approaches with time/space and when each wins.
 - Compare vs a typical optimal approach; explain WHY faster ideas win (data structures / algorithms), not fake timings.
-- suggestedMistakeTags: use ONLY these exact strings when relevant: ${TAG_LIST}
+- suggestedMistakeTags: 0–5 DSA **topic / technique** slugs for concept gaps only (examples: two_pointers, hash_table, binary_search, tree, bfs, dfs, dp, sliding_window, stack, graph). Use snake_case. Tag a technique the learner missed or misused (e.g. should have used two pointers → "two_pointers"). Prefer LeetCode-style topics.
+- NEVER put syntax typos, language API recall, compiler errors, or "forgot a semicolon" in suggestedMistakeTags — those are not topic weaknesses. Leave the array empty if there is no conceptual gap.
 - Return ONLY valid JSON matching the schema. No markdown fences, no commentary outside JSON.
 - Keep every string field concise. Prefer short bullets over long essays so the JSON stays complete.
 

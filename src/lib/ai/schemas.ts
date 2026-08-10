@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MISTAKE_CATEGORIES } from "@/lib/mistakes/categories";
+import { normalizeTopicTags } from "@/lib/mistakes/categories";
 
 export const AlternateApproachSchema = z.object({
   name: z.string(),
@@ -34,13 +34,12 @@ export const MentorAnalysisSchema = z.object({
 export type MentorAnalysis = z.infer<typeof MentorAnalysisSchema>;
 export type AlternateApproach = z.infer<typeof AlternateApproachSchema>;
 
-/** Soft-clean tags so Zod still passes if the model invents one. */
+/**
+ * Normalize mentor topic tags. Drops syntax/noise. No fixed allowlist.
+ * Cap at 8 tags.
+ */
 export function sanitizeSuggestedTags(tags: string[]): string[] {
-  const allowed = new Set<string>(MISTAKE_CATEGORIES);
-  const cleaned = tags
-    .map((t) => t.trim().toLowerCase().replace(/\s+/g, "_"))
-    .filter((t) => allowed.has(t));
-  return [...new Set(cleaned)];
+  return normalizeTopicTags(tags).slice(0, 8);
 }
 
 export type SessionMessage = {
