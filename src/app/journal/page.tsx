@@ -1,14 +1,30 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { MistakeForm } from "@/components/journal/MistakeForm";
+import { MistakeList } from "@/components/journal/MistakeList";
+
 export default function JournalPage() {
+  const [listKey, setListKey] = useState(0);
+  const refreshList = useCallback(() => {
+    setListKey((k) => k + 1);
+  }, []);
+
   return (
-    <div className="animate-fade-in max-w-xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Mistake journal</h1>
-      <p className="mt-2 text-muted">
-        Track recurring patterns — missed hashmaps, overused sorting, edge cases,
-        and more. Full journal UI ships in Phase 4.
-      </p>
-      <div className="mt-6 rounded-[var(--radius)] border border-border bg-bg2/50 p-5">
-        <p className="text-sm text-muted">No mistakes logged yet.</p>
-      </div>
+    <div className="animate-fade-in mx-auto max-w-2xl space-y-8">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Topic journal
+        </h1>
+        <p className="mt-2 text-muted">
+          Log concept gaps (two pointers, trees, …) — not syntax typos. All
+          logs stay here; Insights will count them later to show weak topics.
+        </p>
+      </header>
+
+      <MistakeList key={listKey} />
+
+      <MistakeForm onCreated={refreshList} />
     </div>
   );
 }

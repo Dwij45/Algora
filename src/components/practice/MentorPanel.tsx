@@ -1,7 +1,7 @@
 "use client";
 
 import type { MentorAnalysis } from "@/lib/ai/schemas";
-import { Badge } from "@/components/ui/Badge";
+import { LogMistakeControl } from "@/components/journal/LogMistakeControl";
 
 type MentorPanelProps = {
   analysis: MentorAnalysis | null;
@@ -9,6 +9,7 @@ type MentorPanelProps = {
   loading?: boolean;
   error?: string | null;
   footer?: React.ReactNode;
+  sessionId?: string | null;
 };
 
 /** Bottom mentor pane — card grid like a feedback console. */
@@ -18,6 +19,7 @@ export function MentorPanel({
   loading,
   error,
   footer,
+  sessionId,
 }: MentorPanelProps) {
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-bg1">
@@ -118,21 +120,22 @@ export function MentorPanel({
               </MentorCard>
             ) : null}
 
-            {analysis.suggestedMistakeTags.length > 0 ? (
-              <MentorCard
-                title="Possible mistake tags"
-                tone="warning"
-                className="sm:col-span-2"
-              >
-                <div className="flex flex-wrap gap-1.5">
-                  {analysis.suggestedMistakeTags.map((t) => (
-                    <Badge key={t} className="font-mono text-warning">
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
-              </MentorCard>
-            ) : null}
+            <MentorCard
+              title="Topic gaps"
+              tone="warning"
+              className="sm:col-span-2"
+            >
+              {sessionId ? (
+                <LogMistakeControl
+                  sessionId={sessionId}
+                  suggestedTags={analysis.suggestedMistakeTags}
+                />
+              ) : (
+                <p className="text-sm text-muted">
+                  Analyze first to unlock Log on topic tags.
+                </p>
+              )}
+            </MentorCard>
 
             <details
               key={revealAlternates ? "revealed" : "hidden"}
