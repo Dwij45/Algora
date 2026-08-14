@@ -22,7 +22,7 @@ const LANGS = [
   { id: "plaintext", label: "Plain" },
 ] as const;
 
-const MONACO_THEME = "problem-solver-dark";
+const MONACO_THEME = "algora-dark";
 
 function defineTheme(monaco: Monaco) {
   monaco.editor.defineTheme(MONACO_THEME, {

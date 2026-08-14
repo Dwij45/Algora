@@ -16,6 +16,7 @@
   --warning: #e6b450;
   --ok: #7fd99a;
   --sky: #7dd3fc;
+  --brand-glow: color-mix(in srgb, var(--accent) 45%, transparent);
   --radius: 8px;
   --font-sans: var(--font-ibm-plex-sans), "Segoe UI", sans-serif;
   --font-mono: var(--font-ibm-plex-mono), "Consolas", monospace;
@@ -79,6 +80,31 @@ a {
 
 .animate-fade-in {
   animation: fade-in-up 0.45s ease-out both;
+}
+
+/* Algora wordmark — on-theme teal, pops without leaving the grey shell */
+.brand-mark {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+  text-shadow:
+    0 0 24px var(--brand-glow),
+    0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.brand-mark-nav {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.brand-mark-hero {
+  font-size: clamp(2.75rem, 8vw, 4.25rem);
+  line-height: 0.95;
+}
+
+.brand-mark:hover {
+  color: color-mix(in srgb, var(--accent) 85%, white);
 }
 
 .lined-textarea {
@@ -158,4 +184,101 @@ a {
   font-family: var(--font-mono);
   font-size: 0.92em;
   color: #d7dbe3;
+}
+
+/* —— Landing (Algora) —— */
+.landing-title {
+  text-shadow:
+    0 0 60px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Human profile: code clipped to face silhouette (no big bubble) */
+.landing-code-face {
+  -webkit-mask-image: url("/landing/face-mask.svg");
+  mask-image: url("/landing/face-mask.svg");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  z-index: 2;
+  filter: drop-shadow(0 0 28px color-mix(in srgb, var(--accent) 22%, transparent));
+}
+
+.landing-code-face-scroll {
+  animation: landing-code-rise 56s linear infinite;
+}
+
+.landing-face-glow {
+  z-index: 1;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 28%, transparent) 0%,
+    color-mix(in srgb, #7dd3fc 12%, transparent) 40%,
+    transparent 70%
+  );
+  filter: blur(28px);
+  animation: landing-orb-float 14s ease-in-out infinite;
+}
+
+.landing-code-scroll {
+  animation: landing-code-rise 48s linear infinite;
+}
+
+.landing-code-scroll-slow {
+  animation: landing-code-rise 72s linear infinite;
+}
+
+.landing-code-scroll-rev {
+  animation: landing-code-fall 60s linear infinite;
+}
+
+@keyframes landing-code-rise {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes landing-code-fall {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-orb-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, -4%) scale(1.03);
+  }
+}
+
+.landing-fade-1 {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+.landing-fade-2 {
+  animation: fade-in-up 0.85s ease-out 0.12s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-code-face-scroll,
+  .landing-code-scroll,
+  .landing-code-scroll-slow,
+  .landing-code-scroll-rev,
+  .landing-face-glow,
+  .landing-fade-1,
+  .landing-fade-2 {
+    animation: none;
+  }
 }
