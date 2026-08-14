@@ -30,7 +30,7 @@ export function Badge({
 }
 
 export function DifficultyBadge({ difficulty }: { difficulty: string }) {
-  const tone = DIFFICULTY_CLASS[difficulty] ?? "text-muted border-border bg-bg2";
+  const tone = DIFFICULTY_CLASS[difficulty] ?? "text-muted border-border bg-bg2/90";
   return <Badge className={tone}>{difficulty}</Badge>;
 }
 

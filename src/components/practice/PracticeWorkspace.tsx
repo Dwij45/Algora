@@ -284,7 +284,7 @@ export function PracticeWorkspace({
           </div>
           {history.length > 0 ? (
             <select
-              className="h-7 max-w-[10rem] rounded border border-border bg-bg2 px-1.5 font-mono text-[11px] text-muted"
+              className="h-7 max-w-[10rem] rounded border border-border bg-bg2/90 px-1.5 font-mono text-[11px] text-muted"
               value={session?.id ?? ""}
               onChange={(e) => {
                 const found = history.find((h) => h.id === e.target.value);

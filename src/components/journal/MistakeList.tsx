@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { topicLabel } from "@/lib/mistakes/categories";
 import type { MistakeDto } from "@/lib/mistakes/serialize";
 
@@ -77,16 +77,13 @@ export function MistakeList() {
           {error}
         </p>
       ) : mistakes.length === 0 ? (
-        <p className="rounded-md border border-border bg-bg2/40 px-4 py-5 text-sm text-muted">
-          No topic mistakes logged yet. Analyze a problem, then Log a mentor
-          topic tag (e.g. two_pointers).
-        </p>
+        <p className="text-sm text-muted">No topic logs yet.</p>
       ) : (
         <ul className="space-y-2">
           {mistakes.map((m) => (
             <li
               key={m.id}
-              className="rounded-lg border border-border bg-bg2/40 px-4 py-3"
+              className="rounded-lg border border-border bg-bg2/90 px-4 py-3"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -151,7 +148,7 @@ function FilterChip({
         "h-8 rounded-md border px-2.5 text-xs font-medium transition-colors",
         active
           ? "border-accent/50 bg-accent/15 text-accent"
-          : "border-border bg-bg2/30 text-muted hover:text-text",
+          : "border-border bg-bg2/90 text-muted hover:text-text",
       ].join(" ")}
     >
       {label}

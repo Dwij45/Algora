@@ -63,7 +63,7 @@ export function MistakeForm({ onCreated }: MistakeFormProps) {
   return (
     <form
       onSubmit={(e) => void onSubmit(e)}
-      className="space-y-3 rounded-lg border border-border bg-bg2/40 p-4"
+      className="space-y-3 rounded-lg border border-border bg-bg2/90 p-4"
     >
       <h2 className="text-sm font-semibold tracking-tight">Log manually</h2>
       <p className="text-xs text-muted">

@@ -1,15 +1,21 @@
+"use client";
+
+import { InsightsDashboard } from "@/components/insights/InsightsDashboard";
+import { CodeAtmosphereBg } from "@/components/ui/CodeAtmosphereBg";
+
 export default function InsightsPage() {
   return (
-    <div className="animate-fade-in max-w-xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-      <p className="mt-2 text-muted">
-        Strengths, weaknesses, and focus topics unlock after enough sessions.
-        Rules engine arrives in Phase 5.
-      </p>
-      <div className="mt-6 rounded-[var(--radius)] border border-border bg-bg2/50 p-5">
-        <p className="text-sm text-muted">
-          Keep practicing — insights unlock after ~10 sessions.
-        </p>
+    <div className="relative min-h-[calc(100vh-8rem)] overflow-hidden">
+      <CodeAtmosphereBg />
+      <div className="relative z-10 mx-auto max-w-2xl animate-fade-in space-y-6 px-1 pb-16">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
+          <p className="mt-2 text-muted">
+            Topic weaknesses and strengths from your journal — counted locally,
+            no extra AI calls.
+          </p>
+        </header>
+        <InsightsDashboard />
       </div>
     </div>
   );
