@@ -53,40 +53,43 @@ export async function POST(request: Request, context: RouteContext) {
     }
   })();
 
-  const userContent =
-    message ||
-    (revealAlternates
-      ? "Please reveal alternate approaches and compare versus optimal."
-      : "");
+  const userContent = message;
+  const shouldCallLlm = Boolean(userContent);
 
-  let assistantText: string;
-  try {
-    assistantText = await continueMentorship({
-      title: existing.problem.title,
-      slug: existing.problem.slug,
-      analysis,
-      history,
-      userMessage: userContent,
-      revealAlternates: revealAlternates || existing.revealAlternates,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Continue failed.";
-    return NextResponse.json({ error: msg }, { status: 502 });
+  // Reveal alone expands existing structured analysis in the UI — no LLM call
+  // (avoids Gemini dumping JSON into the console and bloating the panel).
+  let assistantText: string | null = null;
+  if (shouldCallLlm) {
+    try {
+      assistantText = await continueMentorship({
+        title: existing.problem.title,
+        slug: existing.problem.slug,
+        analysis,
+        history,
+        userMessage: userContent,
+        revealAlternates: revealAlternates || existing.revealAlternates,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Continue failed.";
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
   }
 
   const at = new Date().toISOString();
-  const nextMessages: SessionMessage[] = [
-    ...history,
-    { role: "user", content: userContent, at },
-    { role: "assistant", content: assistantText.trim(), at },
-  ].slice(-24);
+  const nextMessages: SessionMessage[] = shouldCallLlm
+    ? [
+        ...history,
+        { role: "user", content: userContent, at },
+        { role: "assistant", content: (assistantText ?? "").trim(), at },
+      ].slice(-24)
+    : history;
 
   const updated = await prisma.session.update({
     where: { id },
     data: {
       messagesJson: JSON.stringify(nextMessages),
       revealAlternates: existing.revealAlternates || revealAlternates,
-      status: "continued",
+      status: shouldCallLlm ? "continued" : existing.status,
     },
     include: { problem: { select: { title: true } } },
   });
