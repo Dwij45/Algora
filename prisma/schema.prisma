@@ -69,3 +69,74 @@ model Insight {
 
   @@index([type])
 }
+
+/// Curated I/O (not scraped from LeetCode). No FK so tests can exist before Problem cache.
+model ProblemTestCase {
+  id             String    @id @default(cuid())
+  problemSlug    String
+  visibility     String    @default("sample")
+  ordinal        Int
+  stdin          String
+  expectedStdout String
+  explanation    String?
+  compareMode    String    @default("json")
+  catalogKey     String    @unique
+  createdAt      DateTime  @default(now())
+  runCases       RunCase[]
+
+  @@index([problemSlug, visibility, ordinal])
+}
+
+model ProblemJudgeConfig {
+  problemSlug String   @id
+  entryName   String
+  protocol    String   @default("json_args")
+  updatedAt   DateTime @updatedAt
+}
+
+model Run {
+  id          String    @id @default(cuid())
+  problemSlug String
+  sessionId   String?
+  language    String
+  sourceCode  String
+  mode        String
+  status      String    @default("queued")
+  verdict     String?
+  error       String?
+  inputHash   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cases       RunCase[]
+
+  @@index([problemSlug, createdAt])
+  @@index([inputHash])
+}
+
+model RunCase {
+  id         String           @id @default(cuid())
+  runId      String
+  run        Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCaseId String?
+  testCase   ProblemTestCase? @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  ordinal    Int
+  visibility String
+  status     String
+  stdin      String?
+  stdout     String?
+  stderr     String?
+  expected   String?
+  time       String?
+  memory     String?
+  createdAt  DateTime         @default(now())
+
+  @@index([runId])
+}
+
+model UsageBudget {
+  dayKey      String   @id
+  judgeCalls  Int      @default(0)
+  submitCount Int      @default(0)
+  sampleCount Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
