@@ -13,6 +13,7 @@ import { TopicBadge } from "@/components/ui/Badge";
 import { exportBoardPngBase64 } from "@/lib/board/exportBoard";
 import type { MentorAnalysis, SessionMessage } from "@/lib/ai/schemas";
 import type { ProblemApiDto } from "@/lib/leetcode/normalize";
+import type { RunDto } from "@/lib/judge/serialize";
 import type { SessionDto } from "@/lib/sessions/serialize";
 
 const BoardCanvas = dynamic(
@@ -78,13 +79,21 @@ export function PracticeWorkspace({
   const [sideMode, setSideMode] = useState<SideMode>("notes");
   const [notes, setNotes] = useState("");
   const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("javascript");
+  const [language, setLanguage] = useState("python");
+  const [codeByLang, setCodeByLang] = useState<Record<string, string>>({});
   const [session, setSession] = useState<SessionDto | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SessionDto[]>([]);
   const [includeBoard, setIncludeBoard] = useState(false);
+  const [judgeConfigured, setJudgeConfigured] = useState(false);
+  const [judgeCurated, setJudgeCurated] = useState(false);
+  const [judgeReachable, setJudgeReachable] = useState(false);
+  const [starters, setStarters] = useState<Record<string, string> | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [lastRun, setLastRun] = useState<RunDto | null>(null);
 
   const analysis =
     session && isMentorAnalysis(session.analysis) ? session.analysis : null;
@@ -106,6 +115,83 @@ export function PracticeWorkspace({
     void loadHistory();
   }, [loadHistory]);
 
+  const loadJudgeMeta = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/problems/${encodeURIComponent(problem.slug)}/tests`,
+      );
+      const data = (await res.json()) as {
+        configured?: boolean;
+        reachable?: boolean;
+        curated?: boolean;
+        starters?: Record<string, string> | null;
+      };
+      if (!res.ok) return;
+      setJudgeConfigured(Boolean(data.configured));
+      setJudgeReachable(Boolean(data.reachable));
+      setJudgeCurated(Boolean(data.curated));
+      setStarters(data.starters ?? null);
+    } catch {
+      // non-fatal
+    }
+  }, [problem.slug]);
+  
+  useEffect(() => {
+    void loadJudgeMeta();
+  }, [loadJudgeMeta]);
+  
+  useEffect(() => {
+    function onFocus() {
+      void loadJudgeMeta();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadJudgeMeta]);
+
+  useEffect(() => {
+    let lang = "python";
+    let byLang: Record<string, string> = {};
+    try {
+      const raw = localStorage.getItem(`algora:code:${problem.slug}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          language?: string;
+          byLang?: Record<string, string>;
+        };
+        if (parsed.language) lang = parsed.language;
+        if (parsed.byLang) byLang = parsed.byLang;
+      }
+    } catch {
+      // ignore
+    }
+    setLanguage(lang);
+    setCodeByLang(byLang);
+    setCode(byLang[lang] ?? "");
+    setLastRun(null);
+    setRunError(null);
+  }, [problem.slug]);
+
+  useEffect(() => {
+    if (!starters) return;
+    setCode((current) => {
+      if (current.trim()) return current;
+      return starters[language] ?? current;
+    });
+  }, [starters, language, problem.slug]);
+
+  function persistCode(nextLang: string, nextCode: string, extra?: Record<string, string>) {
+    const byLang = { ...codeByLang, ...extra, [nextLang]: nextCode };
+    setCodeByLang(byLang);
+    try {
+      localStorage.setItem(
+        `algora:code:${problem.slug}`,
+        JSON.stringify({ language: nextLang, byLang }),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     if (!initialSessionId) return;
     let cancelled = false;
@@ -119,7 +205,7 @@ export function PracticeWorkspace({
         if (!res.ok || !data.session || cancelled) return;
         setSession(data.session);
         setNotes(data.session.userLogic);
-        setCode(data.session.userLogic);
+        if (data.session.userCode) setCode(data.session.userCode);
       } catch {
         // ignore
       }
@@ -165,7 +251,7 @@ export function PracticeWorkspace({
         body: JSON.stringify({
           problemSlug: problem.slug,
           userLogic,
-          userCode: null,
+          userCode: code.trim() || null,
           selfComplexity: null,
           boardImageBase64,
           boardImageMime: boardImageBase64 ? "image/png" : null,
@@ -214,10 +300,44 @@ export function PracticeWorkspace({
     }
   }
 
+  function onLanguageChange(next: string) {
+    persistCode(next, codeByLang[next] || starters?.[next] || "", { [language]: code });
+    setCode(codeByLang[next] || starters?.[next] || "");
+    setLanguage(next);
+  }
+
+  async function onJudge(mode: "sample" | "submit") {
+    setRunning(true);
+    setRunError(null);
+    try {
+      const res = await fetch("/api/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problemSlug: problem.slug,
+          language,
+          sourceCode: code,
+          mode,
+          sessionId: session?.id ?? null,
+        }),
+      });
+      const data = (await res.json()) as { run?: RunDto; error?: string };
+      if (!res.ok || !data.run) {
+        setRunError(data.error ?? "Run failed.");
+        return;
+      }
+      setLastRun(data.run);
+    } catch {
+      setRunError("Network error while talking to the judge.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
   function reopen(s: SessionDto) {
     setSession(s);
     setNotes(s.userLogic);
-    setCode(s.userLogic);
+    if (s.userCode) setCode(s.userCode);
     setError(null);
     setSideMode("notes");
   }
@@ -351,12 +471,23 @@ export function PracticeWorkspace({
                 ) : sideMode === "code" ? (
                   <LogicInput
                     value={code}
-                    onChange={setCode}
+                    onChange={(v) => {
+                      setCode(v);
+                      persistCode(language, v);
+                    }}
                     onAnalyze={onAnalyze}
                     analyzing={analyzing}
                     language={language}
-                    onLanguageChange={setLanguage}
+                    onLanguageChange={onLanguageChange}
                     allowBoardOnly={includeBoard}
+                    judgeConfigured={judgeConfigured}
+                    judgeReachable={judgeReachable}
+                    judgeCurated={judgeCurated}
+                    running={running}
+                    runError={runError}
+                    lastRun={lastRun}
+                    onRun={() => void onJudge("sample")}
+                    onSubmit={() => void onJudge("submit")}
                   />
                 ) : (
                   <BoardCanvas
