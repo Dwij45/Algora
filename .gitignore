@@ -51,8 +51,6 @@ src/generated/prisma
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+.piston-data/
 
 /src/generated/prisma
