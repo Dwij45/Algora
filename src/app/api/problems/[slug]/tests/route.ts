@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { JUDGE_CATALOG } from "@/lib/judge/catalog";
-import { isRunnerConfigured } from "@/lib/judge/executor-client";
 import { syncCatalogForSlug } from "@/lib/judge/sync";
 import { prisma } from "@/lib/db";
 import { normalizeProblemSlug } from "@/lib/utils/slug";
+import { isRunnerConfigured, runnerReachable } from "@/lib/judge/executor-client";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -22,9 +22,12 @@ export async function GET(_request: Request, context: RouteContext) {
     orderBy: { ordinal: "asc" },
   });
 
+  const configured = isRunnerConfigured();
+
   return NextResponse.json({
     slug,
-    configured: isRunnerConfigured(),
+    configured,
+    reachable: configured ? await runnerReachable() : false,
     curated: Boolean(spec),
     entryName: spec?.entryName ?? null,
     starters: spec?.starters ?? null,

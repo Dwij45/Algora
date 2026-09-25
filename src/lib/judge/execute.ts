@@ -129,7 +129,10 @@ export async function executeRun(input: {
     );
     await bumpBudget(input.mode, results.length);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Executor request failed.";
+    const raw = err instanceof Error ? err.message : "Executor request failed.";
+    const message = /fetch failed|ECONNREFUSED|Failed to fetch/i.test(raw)
+      ? "Runner is not reachable. Start algora-runner (Docker) or set EXECUTOR_DISABLED=1."
+      : raw;
     const failed = await prisma.run.update({
       where: { id: run.id },
       data: { status: "error", error: message, verdict: "IE" },
