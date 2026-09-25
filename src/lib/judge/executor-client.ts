@@ -6,6 +6,15 @@ export function isRunnerConfigured(): boolean {
   if (process.env.EXECUTOR_DISABLED === "1") return false;
   return true;
 }
+export async function runnerReachable(): Promise<boolean> {
+  const health = `${baseUrl().replace(/\/api\/v2$/, "")}/health`;
+  try {
+    const res = await fetch(health, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 function headers(): HeadersInit {
   const h: Record<string, string> = { "Content-Type": "application/json" };
